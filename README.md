@@ -85,7 +85,7 @@ curl -s -X POST http://localhost:8000/step -H "Content-Type: application/json" \
 
 ```bash
 export API_BASE_URL=https://router.huggingface.co/v1   # optional; this is the default
-export MODEL_NAME=Qwen/Qwen2.5-7B-Instruct               # optional
+export MODEL_NAME=Qwen/Qwen2.5-3B-Instruct               # optional (default in inference.py)
 # Use either key (OpenAI-compatible hosts accept one bearer-style key):
 export OPENAI_API_KEY=sk-...     # preferred name in OpenAI docs
 # export HF_TOKEN=hf_...         # alternative (e.g. Hugging Face Inference/Router)
@@ -97,7 +97,7 @@ export OPENAI_API_KEY=sk-...     # preferred name in OpenAI docs
 python inference.py
 ```
 
-Uses the **OpenAI Python client** against `API_BASE_URL` / `MODEL_NAME` with **`temperature=0`** for reproducible trajectories. Parse per-task **`[END] success=... score=...`** lines for baseline numbers.
+Uses the **OpenAI Python client** against `API_BASE_URL` / `MODEL_NAME` (default **Qwen2.5-3B-Instruct**) with **`temperature=0`** for reproducible trajectories. Parse per-task **`[END] success=... score=...`** lines for baseline numbers.
 
 ### Deterministic baseline (oracle policy)
 
@@ -117,7 +117,7 @@ Upper bound when the model submits **exact** oracle components then `finalize` (
 
 ## Training notebook
 
-See [`notebooks/train_qwen_india_tax.ipynb`](notebooks/train_qwen_india_tax.ipynb) for a **Qwen2.5** LoRA / SFT stub on the same JSONL.
+See [`notebooks/train_qwen_india_tax.ipynb`](notebooks/train_qwen_india_tax.ipynb) for a **Qwen2.5-3B-Instruct** (overridable) LoRA / SFT stub on the same JSONL.
 
 ## Tests and validation
 

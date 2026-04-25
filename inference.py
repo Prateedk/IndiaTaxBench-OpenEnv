@@ -3,7 +3,7 @@
 
 Environment variables:
     API_BASE_URL   — OpenAI-compatible endpoint (default: HF router)
-    MODEL_NAME     — model id (default: Qwen/Qwen2.5-7B-Instruct)
+    MODEL_NAME     — model id (default: Qwen/Qwen2.5-3B-Instruct)
     OPENAI_API_KEY — Preferred API key for OpenAI-compatible providers
     HF_TOKEN / API_KEY — Alternative secrets if OPENAI_API_KEY is unset
     ENV_URL        — IndiaTaxBench server base URL (default: live HF Space)
@@ -30,7 +30,7 @@ if str(ROOT) not in sys.path:
 from server.tasks import ALL_TASK_IDS
 
 API_BASE_URL = os.getenv("API_BASE_URL", "https://router.huggingface.co/v1")
-MODEL_NAME = os.getenv("MODEL_NAME", "Qwen/Qwen2.5-7B-Instruct")
+MODEL_NAME = os.getenv("MODEL_NAME", "Qwen/Qwen2.5-3B-Instruct")
 
 
 def _resolve_api_key() -> str:

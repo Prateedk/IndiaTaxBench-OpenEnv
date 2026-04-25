@@ -1,4 +1,4 @@
-# Baseline inference env (see README): API_BASE_URL, MODEL_NAME, and one of
+# Baseline inference env (see README): API_BASE_URL, MODEL_NAME (default Qwen2.5-3B-Instruct), and one of
 # OPENAI_API_KEY | HF_TOKEN | API_KEY for the OpenAI-compatible client.
 spec_version: 1
 name: india-tax-bench
