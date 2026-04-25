@@ -83,7 +83,19 @@ uv run pytest tests/ -v
 uv run openenv validate .
 # With a running server (e.g. uv run uvicorn india_tax_bench.server.app:app --port 8000):
 uv run openenv validate --url http://127.0.0.1:8000 --timeout 30
-bash validate-submission.sh https://your-space.hf.space .
+```
+
+Full submission-style check (same idea as `meeting_notes_env/validate-submission.sh`): ping your Space’s `/reset`, optionally `docker build`, then `openenv validate .` and `openenv validate --url …`.
+
+```bash
+# Fast CI-style (no local Docker image build):
+SKIP_DOCKER=1 bash validate-submission.sh https://prateekdebit-india-tax-bench-openenv.hf.space .
+
+# Include Docker build from repo root Dockerfile (~10+ minutes first time):
+bash validate-submission.sh https://prateekdebit-india-tax-bench-openenv.hf.space .
+
+# Local openenv only (no runtime --url pass):
+SKIP_RUNTIME=1 bash validate-submission.sh https://prateekdebit-india-tax-bench-openenv.hf.space .
 ```
 
 ## Oracle calibration (README tables)
