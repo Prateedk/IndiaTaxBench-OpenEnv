@@ -1,6 +1,6 @@
 ---
 title: IndiaTaxBench OpenEnv
-emoji: moneybag
+emoji: 💰
 colorFrom: yellow
 colorTo: red
 sdk: docker
