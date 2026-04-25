@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import ast
 import json
+import re
 from typing import Any, Dict, List
 
 PREDICT_PROMPT = """\
@@ -52,18 +54,54 @@ def clean_json(raw: str) -> str:
     return raw
 
 
-def parse_prediction(raw: str) -> Dict[str, float]:
+_BRACE_RE = re.compile(r"\{.*\}", re.DOTALL)
+
+
+def _coerce_obj(raw: str) -> Dict[str, Any]:
+    """Parse the model's JSON-ish output into a dict.
+
+    Tries (in order):
+      1. strict json.loads
+      2. regex first {...} block + json.loads
+      3. ast.literal_eval (handles single quotes, trailing commas, Python dicts)
+    Returns {} when all fail; never raises.
+    """
+    candidates: List[str] = []
     cleaned = clean_json(raw)
-    data = json.loads(cleaned)
-    if not isinstance(data, dict):
-        return {}
+    if cleaned:
+        candidates.append(cleaned)
+    m = _BRACE_RE.search(cleaned or raw or "")
+    if m:
+        candidates.append(m.group(0))
+
+    for cand in candidates:
+        try:
+            data = json.loads(cand)
+            if isinstance(data, dict):
+                return data
+        except Exception:
+            pass
+        try:
+            data = ast.literal_eval(cand)
+            if isinstance(data, dict):
+                return data
+        except Exception:
+            pass
+    return {}
+
+
+def parse_prediction(raw: str) -> Dict[str, float]:
+    data = _coerce_obj(raw)
     out: Dict[str, float] = {}
     for k in ("total", "initial_tax", "surcharge", "cess"):
         v = data.get(k)
         if v is None:
             out[k] = 0.0
-        else:
+            continue
+        try:
             out[k] = float(v)
+        except (TypeError, ValueError):
+            out[k] = 0.0
     return out
 
 
