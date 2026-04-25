@@ -107,11 +107,11 @@ Upper bound when the model submits **exact** oracle components then `finalize` (
 
 | task_id | difficulty | oracle_base_reward | oracle_finalize_reward |
 |---------|------------|--------------------|-------------------------|
-| `business_only_fy2425` | medium | 1.0000 | 1.0000 |
-| `salary_capital_gains_fy2425` | hard | 1.0000 | 1.0000 |
-| `salary_metro_80c_fy2425` | hard | 1.0000 | 1.0000 |
-| `salary_non_metro_hra_fy2425` | medium | 1.0000 | 1.0000 |
-| `senior_salary_deductions_fy2425` | easy | 1.0000 | 1.0000 |
+| `business_only_fy2425` | medium | 1.0000 | 0.9900 |
+| `salary_capital_gains_fy2425` | hard | 1.0000 | 0.9900 |
+| `salary_metro_80c_fy2425` | hard | 1.0000 | 0.9900 |
+| `salary_non_metro_hra_fy2425` | medium | 1.0000 | 0.9900 |
+| `senior_salary_deductions_fy2425` | easy | 1.0000 | 0.9900 |
 
 **LLM baseline:** depends on provider and weights; run `python inference.py` with your keys and record `[END]` lines per task for submission tables.
 

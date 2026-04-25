@@ -29,8 +29,8 @@ try:
 except ImportError:
     from server.tasks import ALL_TASK_IDS, TASKS
 
-REWARD_MIN = 0.0
-REWARD_MAX = 1.0
+REWARD_MIN = 0.01
+REWARD_MAX = 0.99
 MAX_STEPS = 15
 MAX_HINTS = 3
 HINT_PENALTY = 0.03
