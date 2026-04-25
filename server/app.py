@@ -16,12 +16,32 @@ except (ImportError, SystemError):
     from models import IndiaTaxBenchAction, IndiaTaxBenchObservation
     from server.india_tax_bench_environment import IndiaTaxBenchEnvironment
 
+
+# OpenEnv's REST `/reset` and `/step` handlers call `env_factory()` and `env.close()`
+# on every request, which destroys per-episode state (submitted_predictions, step_count,
+# task selection). We expose a process-wide singleton so multi-step episodes work
+# over plain REST. Concurrent multi-session use should switch to the MCP endpoint.
+_singleton_env: IndiaTaxBenchEnvironment | None = None
+
+
+def _singleton_factory() -> IndiaTaxBenchEnvironment:
+    global _singleton_env
+    if _singleton_env is None:
+        _singleton_env = IndiaTaxBenchEnvironment()
+        # `close()` is invoked after each REST request; keep the singleton alive.
+        _singleton_env.close = lambda: None  # type: ignore[method-assign]
+    return _singleton_env
+
+
+# Mark stateful so create_app forces max_concurrent_envs=1 (single shared instance).
+IndiaTaxBenchEnvironment.SUPPORTS_CONCURRENT_SESSIONS = False  # type: ignore[attr-defined]
+
 app = create_app(
-    IndiaTaxBenchEnvironment,
+    _singleton_factory,
     IndiaTaxBenchAction,
     IndiaTaxBenchObservation,
     env_name="india-tax-bench",
-    max_concurrent_envs=4,
+    max_concurrent_envs=1,
 )
 
 if not any(getattr(r, "path", None) == "/" for r in app.routes):

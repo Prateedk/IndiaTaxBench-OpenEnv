@@ -100,9 +100,16 @@ def _grade_finalize(
 
 
 class IndiaTaxBenchEnvironment(Environment):
-    """Multi-step prediction of old-regime tax components from JSON scenarios."""
+    """Multi-step prediction of old-regime tax components from JSON scenarios.
 
-    SUPPORTS_CONCURRENT_SESSIONS: bool = True
+    NOTE: OpenEnv's REST endpoints recreate the env on every request, so true
+    multi-session concurrency requires the MCP transport. For REST-based
+    multi-step episodes we publish this env as a process singleton in
+    ``server/app.py``; concurrent users then share state, which is acceptable
+    for the hackathon-style benchmark.
+    """
+
+    SUPPORTS_CONCURRENT_SESSIONS: bool = False
 
     def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
