@@ -5,7 +5,7 @@ Environment variables:
     API_BASE_URL   — OpenAI-compatible endpoint (default: HF router)
     MODEL_NAME     — model id (default: Qwen/Qwen2.5-7B-Instruct)
     HF_TOKEN       — Hugging Face / API key (required for default router)
-    ENV_URL        — IndiaTaxBench server base URL
+    ENV_URL        — IndiaTaxBench server base URL (default: live HF Space)
     INFERENCE_HTTP_TIMEOUT — seconds (default: 120)
     INFERENCE_MAX_TASKS    — smoke: only first N tasks
     SUCCESS_SCORE_THRESHOLD — finalize reward above this counts as success (default: 0.35)
@@ -35,7 +35,10 @@ HF_TOKEN = os.getenv("HF_TOKEN")
 if HF_TOKEN is None:
     raise ValueError("HF_TOKEN environment variable is required")
 
-ENV_URL = os.getenv("ENV_URL", "http://127.0.0.1:8000")
+ENV_URL = os.getenv(
+    "ENV_URL",
+    "https://prateekdebit-india-tax-bench-openenv.hf.space",
+)
 HTTP_TIMEOUT = float(os.getenv("INFERENCE_HTTP_TIMEOUT", "120"))
 _MAX_RAW = os.getenv("INFERENCE_MAX_TASKS", "").strip()
 INFERENCE_MAX_TASKS = int(_MAX_RAW) if _MAX_RAW.isdigit() else None

@@ -65,7 +65,8 @@ curl -s -X POST http://localhost:8000/step -H "Content-Type: application/json" \
 
 ```bash
 export HF_TOKEN=hf_...
-export ENV_URL=http://127.0.0.1:8000
+# ENV_URL defaults to the live Space; override for local server:
+# export ENV_URL=http://127.0.0.1:8000
 # optional: export INFERENCE_MAX_TASKS=2
 python inference.py
 ```
