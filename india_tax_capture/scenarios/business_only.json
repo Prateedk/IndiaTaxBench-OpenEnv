@@ -1,0 +1,16 @@
+{
+  "tax_settings": {
+    "age": 45,
+    "financial_year": 2025,
+    "is_metro_resident": true,
+    "employment_type": "self_employed"
+  },
+  "business": {
+    "business_income": 850000,
+    "property_income": 120000
+  },
+  "deductions": {
+    "section_80c": 150000,
+    "section_24b": 150000
+  }
+}

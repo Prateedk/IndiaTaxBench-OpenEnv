@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "india-tax-capture"
+version = "0.1.0"
+description = "Capture taxcalcindia (request, response) pairs for offline LLM training — FY 2024–25 / old regime via local engine"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "taxcalcindia==0.1.4",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0.0"]
+
+[project.scripts]
+capture-india-tax = "capture_india_tax_dataset:main"
+
+[tool.setuptools]
+py-modules = ["capture_india_tax_dataset"]

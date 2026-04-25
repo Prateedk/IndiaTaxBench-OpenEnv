@@ -1,0 +1,76 @@
+"""Integration tests for IndiaTaxBenchEnvironment."""
+
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from models import IndiaTaxBenchAction, IndiaTaxBenchObservation
+from server.india_tax_bench_environment import (
+    IndiaTaxBenchEnvironment,
+    MAX_STEPS,
+    REWARD_MAX,
+    REWARD_MIN,
+)
+from server.tasks import ALL_TASK_IDS, TASKS
+
+
+class TestReset:
+    def test_reset_returns_observation(self):
+        env = IndiaTaxBenchEnvironment()
+        tid = ALL_TASK_IDS[0]
+        obs = env.reset(task=tid)
+        assert isinstance(obs, IndiaTaxBenchObservation)
+        assert obs.task_id == tid
+        assert obs.done is False
+        assert "tax_settings" in obs.scenario_json
+
+    def test_reset_random(self):
+        env = IndiaTaxBenchEnvironment()
+        obs = env.reset()
+        assert obs.task_id in ALL_TASK_IDS
+
+    def test_reset_valid_actions(self):
+        env = IndiaTaxBenchEnvironment()
+        obs = env.reset(task=ALL_TASK_IDS[0])
+        assert "submit_prediction" in obs.valid_actions
+        assert "finalize" in obs.valid_actions
+
+
+class TestSubmitAndFinalize:
+    def test_perfect_oracle_high_reward(self):
+        tid = ALL_TASK_IDS[0]
+        o = TASKS[tid]["oracle"]
+        env = IndiaTaxBenchEnvironment()
+        env.reset(task=tid)
+        obs = env.step(
+            IndiaTaxBenchAction(
+                action_type="submit_prediction",
+                predicted_total=o["total"],
+                predicted_initial_tax=o["initial_tax"],
+                predicted_surcharge=o["surcharge"],
+                predicted_cess=o["cess"],
+            )
+        )
+        assert obs.done is False
+        assert obs.submitted_predictions[-1]["score"] > 0.99
+        fin = env.step(IndiaTaxBenchAction(action_type="finalize"))
+        assert fin.done is True
+        assert float(fin.reward or 0) > 0.5
+
+    def test_bad_prediction_low_finalize(self):
+        tid = ALL_TASK_IDS[0]
+        env = IndiaTaxBenchEnvironment()
+        env.reset(task=tid)
+        env.step(
+            IndiaTaxBenchAction(
+                action_type="submit_prediction",
+                predicted_total=0.0,
+                predicted_initial_tax=0.0,
+                predicted_surcharge=0.0,
+                predicted_cess=0.0,
+            )
+        )
+        fin = env.step(IndiaTaxBenchAction(action_type="finalize"))
+        assert fin.done is True
+        assert float(fin.reward or 0) < float(REWARD_MAX)

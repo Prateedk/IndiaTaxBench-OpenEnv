@@ -1,0 +1,28 @@
+{
+  "defaults": {
+    "is_comparision_needed": true,
+    "is_tax_per_slab_needed": false
+  },
+  "items": [
+    {
+      "id": "salary_metro_80c_fy2425",
+      "scenario_file": "salary_metro_80c.json"
+    },
+    {
+      "id": "salary_non_metro_hra_fy2425",
+      "scenario_file": "salary_non_metro_hra.json"
+    },
+    {
+      "id": "business_only_fy2425",
+      "scenario_file": "business_only.json"
+    },
+    {
+      "id": "senior_salary_deductions_fy2425",
+      "scenario_file": "senior_salary_deductions.json"
+    },
+    {
+      "id": "salary_capital_gains_fy2425",
+      "scenario_file": "salary_capital_gains.json"
+    }
+  ]
+}

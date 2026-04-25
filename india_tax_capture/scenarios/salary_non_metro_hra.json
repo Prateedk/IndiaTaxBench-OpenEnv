@@ -1,0 +1,19 @@
+{
+  "tax_settings": {
+    "age": 28,
+    "financial_year": 2025,
+    "is_metro_resident": false,
+    "employment_type": "private"
+  },
+  "salary": {
+    "basic_and_da": 900000,
+    "hra": 180000,
+    "other_allowances": 50000,
+    "bonus_and_commissions": 80000
+  },
+  "deductions": {
+    "section_80c": 100000,
+    "rent_for_hra_exemption": 150000,
+    "professional_tax": 2000
+  }
+}
