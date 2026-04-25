@@ -121,16 +121,21 @@ def parse_prediction(raw: str) -> Dict[str, float]:
     return out
 
 
-def env_reset(task_id: str) -> dict:
-    resp = requests.post(
+def new_env_session() -> requests.Session:
+    """Fresh cookie jar per episode so HF Space sticks reset/step/finalize."""
+    return requests.Session()
+
+
+def env_reset(task_id: str, *, sess: requests.Session) -> dict:
+    resp = sess.post(
         f"{ENV_URL.rstrip('/')}/reset", json={"task": task_id}, timeout=HTTP_TIMEOUT
     )
     resp.raise_for_status()
     return resp.json()
 
 
-def env_step(action: Dict[str, Any]) -> dict:
-    resp = requests.post(
+def env_step(action: Dict[str, Any], *, sess: requests.Session) -> dict:
+    resp = sess.post(
         f"{ENV_URL.rstrip('/')}/step", json={"action": action}, timeout=HTTP_TIMEOUT
     )
     resp.raise_for_status()
@@ -160,7 +165,8 @@ def main() -> None:
                 flush=True,
             )
 
-            reset_data = env_reset(task_id)
+            sess = new_env_session()
+            reset_data = env_reset(task_id, sess=sess)
             obs = reset_data.get("observation", reset_data)
             scenario = obs.get("scenario_json", "")
 
@@ -180,7 +186,7 @@ def main() -> None:
                 "predicted_surcharge": pred.get("surcharge", 0.0),
                 "predicted_cess": pred.get("cess", 0.0),
             }
-            step_data = env_step(action)
+            step_data = env_step(action, sess=sess)
             step_obs = step_data.get("observation", step_data)
             reward = float(step_data.get("reward", step_obs.get("reward", 0.0)) or 0.0)
             done = step_data.get("done", step_obs.get("done", False))
@@ -225,7 +231,7 @@ def main() -> None:
                         "predicted_surcharge": rp.get("surcharge", 0.0),
                         "predicted_cess": rp.get("cess", 0.0),
                     }
-                    step_data = env_step(rev_action)
+                    step_data = env_step(rev_action, sess=sess)
                     step_obs = step_data.get("observation", step_data)
                     reward = float(step_data.get("reward", step_obs.get("reward", 0.0)) or 0.0)
                     done = step_data.get("done", step_obs.get("done", False))
@@ -241,7 +247,7 @@ def main() -> None:
 
             if not done:
                 fin_action = {"action_type": "finalize"}
-                step_data = env_step(fin_action)
+                step_data = env_step(fin_action, sess=sess)
                 step_obs = step_data.get("observation", step_data)
                 reward = float(step_data.get("reward", step_obs.get("reward", 0.0)) or 0.0)
                 error_str = step_obs.get("metadata", {}).get("error", None)
