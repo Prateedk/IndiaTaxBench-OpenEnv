@@ -23,6 +23,7 @@ dev = [
     "pytest-cov>=4.0.0",
 ]
 notebook = [
+    "ipykernel>=6.29.0",
     "transformers>=4.44.0",
     "torch>=2.2.0",
     "peft>=0.12.0",

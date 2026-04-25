@@ -117,7 +117,30 @@ Upper bound when the model submits **exact** oracle components then `finalize` (
 
 ## Training notebook
 
-See [`notebooks/train_qwen_india_tax.ipynb`](notebooks/train_qwen_india_tax.ipynb) for a **Qwen2.5-3B-Instruct** (overridable) LoRA / SFT stub on the same JSONL.
+See [`notebooks/train_qwen_india_tax.ipynb`](notebooks/train_qwen_india_tax.ipynb) for a **Qwen2.5-3B-Instruct** (overridable) LoRA / SFT stub that pulls **rewards from this OpenEnv Space** and trains locally with **TRL `SFTTrainer`**.
+
+### Open in Colab (one click)
+
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Prateedk/IndiaTaxBench-OpenEnv/blob/main/notebooks/train_qwen_india_tax.ipynb)
+
+The notebook’s **first cell** auto-clones this repo and `pip install`s `.[notebook]` when running on Colab. Set **Colab Secrets**:
+
+- **`HF_TOKEN`** — required to pull Qwen weights and `push_to_hub` adapters.
+- **`ENV_URL`** — your OpenEnv Space URL (defaults to the live demo).
+- *(optional)* **`OPENAI_API_KEY`** / **`API_KEY`** — only if you set `USE_API_FOR_POLICY=1` to use the HF Inference Router instead of the local model.
+- *(optional)* **`MODEL_NAME`** — override the 3B default.
+
+Then **Runtime → Change runtime type → GPU** (T4 is enough for `Qwen2.5-3B-Instruct` + LoRA) and **Run all**.
+
+**Jupyter / Cursor kernel:** the name `openenv-india-tax-bench` only appears after you install **`ipykernel`** in the project venv and **register** a kernelspec (once per machine):
+
+```bash
+cd IndiaTaxBench-OpenEnv
+uv sync --extra notebook --extra dev
+uv run python -m ipykernel install --user --name openenv-india-tax-bench --display-name "openenv-india-tax-bench (IndiaTaxBench)"
+```
+
+Then reload the window or pick **Select Notebook Kernel** → **openenv-india-tax-bench (IndiaTaxBench)**. Alternatively choose **Python: Select Interpreter** → `.venv/bin/python` under this repo (no separate kernelspec needed in many setups).
 
 ## Tests and validation
 
