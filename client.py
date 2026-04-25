@@ -22,10 +22,15 @@ class IndiaTaxBenchEnvClient(
 
     def _parse_result(self, payload: Dict[str, Any]) -> StepResult[IndiaTaxBenchObservation]:
         obs_data = payload.get("observation", {})
+        td_raw = obs_data.get("task_difficulty", "medium")
+        if td_raw not in ("easy", "medium", "hard"):
+            td_raw = "medium"
+
         observation = IndiaTaxBenchObservation(
             scenario_json=obs_data.get("scenario_json", ""),
             task_id=obs_data.get("task_id", ""),
             task_description=obs_data.get("task_description", ""),
+            task_difficulty=td_raw,
             feedback=obs_data.get("feedback", ""),
             submitted_predictions=obs_data.get("submitted_predictions", []),
             steps_remaining=obs_data.get("steps_remaining", 0),

@@ -5,7 +5,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from models import IndiaTaxBenchAction, IndiaTaxBenchObservation
+from models import IndiaTaxBenchAction, IndiaTaxBenchObservation, IndiaTaxBenchReward
 
 
 def test_action_roundtrip():
@@ -26,8 +26,16 @@ def test_observation_defaults():
         scenario_json="{}",
         task_id="t1",
         task_description="d",
+        task_difficulty="medium",
         feedback="f",
         done=False,
         reward=0.5,
     )
     assert o.valid_actions == []
+
+
+def test_reward_model_bounds():
+    r = IndiaTaxBenchReward(value=0.0)
+    assert r.value == 0.0
+    r1 = IndiaTaxBenchReward(value=1.0)
+    assert r1.value == 1.0

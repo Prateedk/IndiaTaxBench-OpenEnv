@@ -4,7 +4,8 @@
 Environment variables:
     API_BASE_URL   — OpenAI-compatible endpoint (default: HF router)
     MODEL_NAME     — model id (default: Qwen/Qwen2.5-7B-Instruct)
-    HF_TOKEN       — Hugging Face / API key (required for default router)
+    OPENAI_API_KEY — Preferred API key for OpenAI-compatible providers
+    HF_TOKEN / API_KEY — Alternative secrets if OPENAI_API_KEY is unset
     ENV_URL        — IndiaTaxBench server base URL (default: live HF Space)
     INFERENCE_HTTP_TIMEOUT — seconds (default: 120)
     INFERENCE_MAX_TASKS    — smoke: only first N tasks
@@ -30,10 +31,23 @@ from server.tasks import ALL_TASK_IDS
 
 API_BASE_URL = os.getenv("API_BASE_URL", "https://router.huggingface.co/v1")
 MODEL_NAME = os.getenv("MODEL_NAME", "Qwen/Qwen2.5-7B-Instruct")
-HF_TOKEN = os.getenv("HF_TOKEN")
 
-if HF_TOKEN is None:
-    raise ValueError("HF_TOKEN environment variable is required")
+
+def _resolve_api_key() -> str:
+    key = (
+        os.getenv("OPENAI_API_KEY")
+        or os.getenv("HF_TOKEN")
+        or os.getenv("API_KEY")
+        or ""
+    ).strip()
+    if not key:
+        raise ValueError(
+            "Set OPENAI_API_KEY, HF_TOKEN, or API_KEY for the OpenAI-compatible API."
+        )
+    return key
+
+
+API_KEY = _resolve_api_key()
 
 ENV_URL = os.getenv(
     "ENV_URL",
@@ -70,7 +84,7 @@ Feedback:
 
 Return ONLY one JSON object with keys: total, initial_tax, surcharge, cess (numbers)."""
 
-client = OpenAI(base_url=API_BASE_URL, api_key=HF_TOKEN)
+client = OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
 
 
 def call_llm(messages: List[Dict[str, str]], max_tokens: int = 512) -> str:
@@ -239,22 +253,22 @@ def main() -> None:
                     flush=True,
                 )
 
-            final_score = all_rewards[-1] if all_rewards else 0.01
+            final_score = all_rewards[-1] if all_rewards else 0.0
             success = final_score > SUCCESS_SCORE_THRESHOLD
 
         except Exception as exc:
             if not all_rewards:
-                all_rewards.append(0.01)
+                all_rewards.append(0.0)
             steps = max(steps, 1)
             print(
                 f"[STEP]  step={steps} action=error "
-                f"reward=0.01 done=true error={exc}",
+                f"reward=0.00 done=true error={exc}",
                 flush=True,
             )
-            final_score = 0.01
+            final_score = 0.0
             success = False
 
-        final_score = min(max(final_score, 0.01), 0.99)
+        final_score = min(max(final_score, 0.0), 1.0)
         success_str = "true" if success else "false"
         rewards_str = ",".join(f"{r:.2f}" for r in all_rewards)
         print(

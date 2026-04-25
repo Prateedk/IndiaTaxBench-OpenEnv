@@ -59,11 +59,12 @@ def main() -> None:
         return
 
     if not args.markdown:
-        print("task_id | oracle_base_reward | oracle_finalize_reward")
-        print("--------|--------------------|------------------------")
+        print("task_id | difficulty | oracle_base_reward | oracle_finalize_reward")
+        print("--------|------------|--------------------|------------------------")
         for tid in _sorted_task_ids()[:3]:
             b, f = _oracle_finalize_reward(tid)
-            print(f"{tid} | {b:.4f} | {f:.4f}")
+            d = TASKS[tid].get("difficulty", "?")
+            print(f"{tid} | {d} | {b:.4f} | {f:.4f}")
         return
 
     print("### Oracle path (exact old-regime components from JSONL)")
@@ -74,11 +75,12 @@ def main() -> None:
         "`oracle_finalize_reward` is the step reward (includes efficiency and penalties)."
     )
     print()
-    print("| task_id | oracle_base_reward | oracle_finalize_reward |")
-    print("|---------|--------------------|-------------------------|")
+    print("| task_id | difficulty | oracle_base_reward | oracle_finalize_reward |")
+    print("|---------|------------|--------------------|-------------------------|")
     for tid in _sorted_task_ids():
         b, f = _oracle_finalize_reward(tid)
-        print(f"| `{tid}` | {b:.4f} | {f:.4f} |")
+        d = TASKS[tid].get("difficulty", "?")
+        print(f"| `{tid}` | {d} | {b:.4f} | {f:.4f} |")
 
 
 if __name__ == "__main__":

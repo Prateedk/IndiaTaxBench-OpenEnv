@@ -4,10 +4,21 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, Literal
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
 _JSONL_PATH = _REPO_ROOT / "india_tax_capture" / "data" / "india_tax_rows.jsonl"
+
+TaskDifficulty = Literal["easy", "medium", "hard"]
+
+# Curated difficulty (scenario complexity / income mix), not oracle reward.
+_TASK_DIFFICULTY: Dict[str, TaskDifficulty] = {
+    "senior_salary_deductions_fy2425": "easy",
+    "salary_non_metro_hra_fy2425": "medium",
+    "business_only_fy2425": "medium",
+    "salary_metro_80c_fy2425": "hard",
+    "salary_capital_gains_fy2425": "hard",
+}
 
 
 def _load_tasks() -> Dict[str, Dict[str, Any]]:
@@ -40,6 +51,7 @@ def _load_tasks() -> Dict[str, Dict[str, Any]]:
             continue
         req = row.get("request") or {}
         scenario = req.get("scenario") if isinstance(req, dict) else {}
+        diff: TaskDifficulty = _TASK_DIFFICULTY.get(str(tid), "medium")
         tasks[str(tid)] = {
             "description": (
                 "Predict India FY 2024–25 **old tax regime** liability: "
@@ -48,6 +60,7 @@ def _load_tasks() -> Dict[str, Dict[str, Any]]:
             ),
             "scenario": scenario if isinstance(scenario, dict) else {},
             "oracle": oracle,
+            "difficulty": diff,
         }
     return tasks
 

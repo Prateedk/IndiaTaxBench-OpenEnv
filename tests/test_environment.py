@@ -23,6 +23,7 @@ class TestReset:
         assert isinstance(obs, IndiaTaxBenchObservation)
         assert obs.task_id == tid
         assert obs.done is False
+        assert obs.task_difficulty in ("easy", "medium", "hard")
         assert "tax_settings" in obs.scenario_json
 
     def test_reset_random(self):

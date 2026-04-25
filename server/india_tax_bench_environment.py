@@ -5,24 +5,32 @@ from __future__ import annotations
 import json
 import math
 import random
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, cast
 from uuid import uuid4
 
 from openenv.core.env_server.interfaces import Environment
 from openenv.core.env_server.types import State
 
 try:
-    from ..models import IndiaTaxBenchAction, IndiaTaxBenchObservation
+    from ..models import (
+        IndiaTaxBenchAction,
+        IndiaTaxBenchObservation,
+        TaskDifficultyLabel,
+    )
 except ImportError:
-    from models import IndiaTaxBenchAction, IndiaTaxBenchObservation
+    from models import (
+        IndiaTaxBenchAction,
+        IndiaTaxBenchObservation,
+        TaskDifficultyLabel,
+    )
 
 try:
     from .tasks import ALL_TASK_IDS, TASKS
 except ImportError:
     from server.tasks import ALL_TASK_IDS, TASKS
 
-REWARD_MIN = 0.01
-REWARD_MAX = 0.99
+REWARD_MIN = 0.0
+REWARD_MAX = 1.0
 MAX_STEPS = 15
 MAX_HINTS = 3
 HINT_PENALTY = 0.03
@@ -132,10 +140,16 @@ class IndiaTaxBenchEnvironment(Environment):
         if extra_meta:
             meta.update(extra_meta)
 
+        diff_raw = t.get("difficulty", "medium")
+        if diff_raw not in ("easy", "medium", "hard"):
+            diff_raw = "medium"
+        diff = cast(TaskDifficultyLabel, diff_raw)
+
         return IndiaTaxBenchObservation(
             scenario_json=json.dumps(scenario, ensure_ascii=False, indent=2),
             task_id=self._current_task_id,
             task_description=str(t.get("description", "")),
+            task_difficulty=diff,
             feedback=feedback,
             submitted_predictions=list(self._submitted),
             steps_remaining=MAX_STEPS - self._state.step_count,

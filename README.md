@@ -14,9 +14,27 @@ tags:
 
 OpenEnv environment where the agent predicts **old tax regime** liability components from a JSON scenario (oracle from [`taxcalcindia`](https://pypi.org/project/taxcalcindia/) capture data).
 
+**Motivation:** Tax estimation from structured inputs is a real analyst-style workflow (not a game). The environment exposes multi-step actions (submit, revise, optional hints, finalize) with dense feedback so agents can learn from partial numeric match before the episode ends.
+
 ## Task source
 
 Tasks are loaded from vendored **[`india_tax_capture/data/india_tax_rows.jsonl`](india_tax_capture/data/india_tax_rows.jsonl)** (one episode per line). See [`india_tax_capture/README.md`](india_tax_capture/README.md) for FY mapping (`financial_year=2025` = FY 2024–25).
+
+Each row defines a deterministic **oracle** (`total`, `initial_tax`, `surcharge`, `cess`) and a curriculum **difficulty** label (scenario complexity).
+
+| Task id | Difficulty | Notes |
+|---------|--------------|--------|
+| `senior_salary_deductions_fy2425` | easy | Senior slab + common deductions; lower liability band. |
+| `salary_non_metro_hra_fy2425` | medium | Salary + HRA (non-metro). |
+| `business_only_fy2425` | medium | Self-employed mix (business + property). |
+| `salary_metro_80c_fy2425` | hard | Metro HRA, 80C/80D caps, higher income. |
+| `salary_capital_gains_fy2425` | hard | Salary plus multiple capital-gains buckets. |
+
+## Typed models (OpenEnv)
+
+- **`IndiaTaxBenchAction`** — `action_type` and optional prediction fields.
+- **`IndiaTaxBenchObservation`** — scenario, task metadata, `task_difficulty`, feedback, `submitted_predictions`, `valid_actions`, plus `reward`, `done`, `metadata`.
+- **`IndiaTaxBenchReward`** — standalone Pydantic model documenting the scalar reward in **[0.0, 1.0]** (same range as `observation.reward` after clamping).
 
 ## Action space
 
@@ -31,7 +49,9 @@ Typed `IndiaTaxBenchAction` (`action_type` + optional fields):
 
 ## Observation space
 
-`IndiaTaxBenchObservation` includes `scenario_json` (public scenario only), `task_id`, `task_description`, `feedback`, `submitted_predictions`, `steps_remaining`, `hints_used`, `valid_actions`, plus standard `reward`, `done`, `metadata`.
+`IndiaTaxBenchObservation` includes `scenario_json` (public scenario only), `task_id`, `task_description`, **`task_difficulty`** (`easy` \| `medium` \| `hard`), `feedback`, `submitted_predictions`, `steps_remaining`, `hints_used`, `valid_actions`, plus standard **`reward`** in **[0.0, 1.0]**, `done`, `metadata`.
+
+**Reward shaping:** `submit_prediction` / `revise_prediction` emit partial progress; `request_context` incurs a small penalty; `finalize` combines best submission match, step efficiency, hint usage, and optional auto-finalize penalty.
 
 ## Setup
 
@@ -64,14 +84,36 @@ curl -s -X POST http://localhost:8000/step -H "Content-Type: application/json" \
 ## Baseline inference
 
 ```bash
-export HF_TOKEN=hf_...
+export API_BASE_URL=https://router.huggingface.co/v1   # optional; this is the default
+export MODEL_NAME=Qwen/Qwen2.5-7B-Instruct               # optional
+# Use either key (OpenAI-compatible hosts accept one bearer-style key):
+export OPENAI_API_KEY=sk-...     # preferred name in OpenAI docs
+# export HF_TOKEN=hf_...         # alternative (e.g. Hugging Face Inference/Router)
+# export API_KEY=...             # generic third option (same usage as the keys above)
+
 # ENV_URL defaults to the live Space; override for local server:
 # export ENV_URL=http://127.0.0.1:8000
 # optional: export INFERENCE_MAX_TASKS=2
 python inference.py
 ```
 
-Uses OpenAI-compatible `API_BASE_URL` / `MODEL_NAME` (default **Qwen/Qwen2.5-7B-Instruct** on Hugging Face router).
+Uses the **OpenAI Python client** against `API_BASE_URL` / `MODEL_NAME` with **`temperature=0`** for reproducible trajectories. Parse per-task **`[END] success=... score=...`** lines for baseline numbers.
+
+### Deterministic baseline (oracle policy)
+
+Upper bound when the model submits **exact** oracle components then `finalize` (no hints). Regenerate anytime:
+
+`uv run python scripts/print_grader_calibration.py --markdown`
+
+| task_id | difficulty | oracle_base_reward | oracle_finalize_reward |
+|---------|------------|--------------------|-------------------------|
+| `business_only_fy2425` | medium | 1.0000 | 1.0000 |
+| `salary_capital_gains_fy2425` | hard | 1.0000 | 1.0000 |
+| `salary_metro_80c_fy2425` | hard | 1.0000 | 1.0000 |
+| `salary_non_metro_hra_fy2425` | medium | 1.0000 | 1.0000 |
+| `senior_salary_deductions_fy2425` | easy | 1.0000 | 1.0000 |
+
+**LLM baseline:** depends on provider and weights; run `python inference.py` with your keys and record `[END]` lines per task for submission tables.
 
 ## Training notebook
 

@@ -1,9 +1,22 @@
 """Data models for IndiaTaxBench (FY 2024–25 old regime tax prediction)."""
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Literal, Optional
 
 from openenv.core.env_server.types import Action, Observation
-from pydantic import Field
+from pydantic import BaseModel, Field
+
+TaskDifficultyLabel = Literal["easy", "medium", "hard"]
+
+
+class IndiaTaxBenchReward(BaseModel):
+    """Scalar reward in [0.0, 1.0] aligned with OpenEnv grading rubrics."""
+
+    value: float = Field(
+        ...,
+        ge=0.0,
+        le=1.0,
+        description="Per-step or terminal reward after clamping.",
+    )
 
 
 class IndiaTaxBenchAction(Action):
@@ -48,6 +61,10 @@ class IndiaTaxBenchObservation(Observation):
     task_description: str = Field(
         default="",
         description="Human-readable task goal",
+    )
+    task_difficulty: TaskDifficultyLabel = Field(
+        default="medium",
+        description="Curriculum label for the episode (easy / medium / hard).",
     )
     feedback: str = Field(default="", description="Per-step grading feedback")
     submitted_predictions: List[Dict[str, Any]] = Field(
