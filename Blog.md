@@ -14,9 +14,69 @@ The **advisor** mode in IndiaTaxBench is built for exactly that. The model must 
 
 ## 2. Our **OpenEnv** environment: tasks + rewards, built for research
 
-IndiaTaxBench is deployed as an **OpenEnv**-style service: you **reset** with a task id, take **steps** (submit or revise advice, then finalize), and get back **observations and rewards** from a real tax-advisor **rubric**—not a hand-wavy LLM-judge in the training loop. Tasks are **scenario-driven** (captured, oracle-checked rows) with clear **task ids**; **rewards** stay in a bounded range and decompose into rubric, efficiency, and penalties so you can debug *why* a run scored what it did.
+IndiaTaxBench is deployed as an **OpenEnv**-style service: you **reset** into a task, take **steps** (submit, optionally revise, optionally request context, then finalize), and every step returns an **observation + reward**.
 
-What makes this setup great for the community: **one HTTP surface** to any trainer or RL stack, **deterministic task definitions** in the repo, and a path from **SFT** to **full RL** without changing the world model—swap the algorithm, keep the same `reset` / `step` contract. That is the kind of **interoperable** env we want for serious LLM + RL work on India income tax.
+### What our tasks look like
+Tasks are loaded from `india_tax_capture/data/india_tax_rows.jsonl`. Each row has:
+- an **id** (the `task_id`)
+- a `request.scenario` dict (the filer’s income/deductions/settings story)
+- a `response.tax_liability.old_regime` block produced by the reference calculator, which provides the **oracle** numeric components (`total`, `initial_tax`, `surcharge`, `cess`)
+
+In the env observation, the scenario is shipped as a pretty-printed JSON string:
+- `scenario_json`: the scenario payload
+- `task_description`: a short instruction string (advisor vs numeric)
+- `task_difficulty`: `easy|medium|hard` (curated label; advisor grading is stricter on “hard” tasks)
+
+### Advisor-mode input/output shape (`reset` and `step`)
+On reset, you select **advisor mode** and (optionally) a specific task id; the response bundles the scenario, text instructions, and the allowed actions:
+
+```json
+{
+  "task_id": "salary_metro_80c_fy2425",
+  "episode_mode": "advisor",
+  "scenario_json": "{ ... }",
+  "task_description": "Given this FY 2024–25 (financial_year=2025) old-regime scenario for task `salary_metro_80c_fy2425`, list practical next-year (next FY / next assessment) tax-saving steps a filer can take—compliant, realistic, and tied to this income and deduction mix (e.g. 80C, NPS, HRA, health insurance, record-keeping, business expenses, capital-gains planning).",
+  "valid_actions": ["submit_tax_advice", "request_context", "finalize_advice"],
+  "steps_remaining": 15,
+  "hints_used": 0,
+  "reward": 0.01,
+  "done": false
+}
+```
+
+In advisor steps, the main action is `submit_tax_advice` (or `revise_tax_advice`) with `advice_text` set to **one JSON object encoded as a string**, with required keys:
+- `filing_profile_summary`: string
+- `next_year_actions`: list of objects like `{ "action": "...", "rationale": "...", "indicative_section": "..." }` (section is optional)
+- `cautions`: list of strings
+
+### How rewards look (advisor)
+Rewards are intentionally **debuggable** and **bounded** (clamped into \([0.01, 0.99]\)).
+
+This is a **long-horizon** task: you can submit, revise, ask for limited hints, and only then finalize. The reward is shaped so that intermediate steps provide training signal, but the terminal score reflects the best work you produced.
+
+- **Per-step shaped reward (dense signal)**:
+  - **Submit**: parse the JSON and score it with the advisor rubric; pay immediately
+    - `step_reward = rubric * 0.10`
+  - **Revise**: only pay for improvement over the prior version you are revising
+    - `step_reward = max(0, rubric_new - rubric_old) * 0.10`
+  - **Request context**: each hint is a fixed penalty, capped to 3 hints
+    - `step_reward = -0.03`
+
+- **Terminal reward on `finalize_advice` (episode objective)**:
+  - pick the **best rubric score** among all advice submissions in the episode
+  - add an **efficiency bonus** for finishing earlier (fewer steps used)
+  - subtract the total hint penalty and (if the episode auto-finalizes at max steps) an auto-finalize penalty
+
+Concretely:
+- `best_rubric = max(submitted_advice[].rubric)`
+- `efficiency_bonus = 0.05 * (steps_remaining / 15)`
+- `hint_penalty = 0.03 * hints_used`
+- `auto_finalize_penalty = 0.05` if max steps were reached (else 0)
+- `final_reward = clamp(best_rubric + efficiency_bonus - hint_penalty - auto_finalize_penalty, 0.01, 0.99)`
+
+The observation also includes your history for transparency:
+- `submitted_advice`: a list of `{rubric, parsed_ok, raw}` entries
+- `feedback`: a human-readable string showing the rubric and the reward components (efficiency, hint penalty, auto-penalty)
 
 ---
 
@@ -37,3 +97,142 @@ Our notebook [`notebooks/train_qwen_india_tax.ipynb`](notebooks/train_qwen_india
 ---
 
 **Bottom line:** IndiaTaxBench’s **advisor** track turns “sounds good” into **measured** improvement. The OpenEnv integration makes that **reproducible**; the notebook shows **SFT + env** working today, with a clear on-ramp to **stronger RL** tomorrow—and a plot that keeps us honest on **out-of-training** tasks.
+
+---
+
+## 4. Run it yourself: advisor `curl` walkthrough (with outputs)
+
+Below are copy-pasteable `curl` calls for a full **advisor** episode. (All responses are JSON; I’m showing the key fields you’ll care about, but the API returns the full `observation` object including `scenario_json`.)
+
+### Reset into advisor mode
+
+```bash
+curl -s -X POST http://localhost:8000/reset -H "Content-Type: application/json" \
+  -d '{"task": "salary_metro_80c_fy2425", "advisor": true}' | jq .
+```
+
+Expected output (shape):
+
+```json
+{
+  "observation": {
+    "episode_mode": "advisor",
+    "task_id": "salary_metro_80c_fy2425",
+    "task_difficulty": "hard",
+    "task_description": "Given this FY 2024–25 (financial_year=2025) old-regime scenario for task `salary_metro_80c_fy2425`, list practical next-year (next FY / next assessment) tax-saving steps a filer can take—compliant, realistic, and tied to this income and deduction mix (e.g. 80C, NPS, HRA, health insurance, record-keeping, business expenses, capital-gains planning).",
+    "reward": 0.01,
+    "done": false,
+    "hints_used": 0,
+    "steps_remaining": 15,
+    "valid_actions": ["finalize_advice", "request_context", "submit_tax_advice"],
+    "feedback": "Propose **next-year (upcoming FY / next assessment) tax-saving steps** ...",
+    "submitted_advice": []
+  }
+}
+```
+
+### Submit advice (as JSON string)
+
+```bash
+ADVICE_JSON='{
+  "filing_profile_summary": "Metro filer: optimize 80C/80CCD, keep HRA proofs, and plan cash flows for next FY.",
+  "next_year_actions": [
+    {"action": "Max out 80C instruments under the cap", "rationale": "Use EPF/PPF/ELSS etc. within limits", "indicative_section": "80C"},
+    {"action": "Consider NPS contribution (80CCD(1B)) if eligible", "rationale": "Additional deduction beyond 80C cap", "indicative_section": "80CCD"},
+    {"action": "Organize rent receipts + landlord PAN where required for HRA", "rationale": "Keep evidence ready for payroll/ITR", "indicative_section": "HRA"}
+  ],
+  "cautions": [
+    "Confirm current-year rule changes and employer HRA policy before acting.",
+    "Don’t claim deductions without documentary proof."
+  ]
+}'
+
+curl -s -X POST http://localhost:8000/step -H "Content-Type: application/json" \
+  -d "$(jq -n --arg a "$ADVICE_JSON" '{action:{action_type:"submit_tax_advice", advice_text:$a}}')" | jq .
+```
+
+Expected output (key fields):
+
+```json
+{
+  "observation": {
+    "reward": 0.07,
+    "done": false,
+    "feedback": "Submitted advice 1: rubric=0.7000 (structured JSON=yes)",
+    "submitted_advice": [
+      {"rubric": 0.7, "parsed_ok": true, "raw": "{...}"}
+    ],
+    "valid_actions": ["finalize_advice", "request_context", "revise_tax_advice", "submit_tax_advice"]
+  }
+}
+```
+
+### (Optional) Revise advice (only improvement is rewarded)
+
+```bash
+curl -s -X POST http://localhost:8000/step -H "Content-Type: application/json" \
+  -d "$(jq -n --arg a "$ADVICE_JSON" '{action:{action_type:"revise_tax_advice", item_index:0, advice_text:$a}}')" | jq .
+```
+
+Expected output (key fields):
+
+```json
+{
+  "observation": {
+    "reward": 0.01,
+    "done": false,
+    "feedback": "Revised advice 0: rubric 0.7000 → 0.7000 (delta=+0.0000)",
+    "submitted_advice": [
+      {"rubric": 0.7, "parsed_ok": true, "raw": "{...}"}
+    ]
+  }
+}
+```
+
+### (Optional) Request context (hint; penalized)
+
+```bash
+curl -s -X POST http://localhost:8000/step -H "Content-Type: application/json" \
+  -d '{"action": {"action_type": "request_context"}}' | jq .
+```
+
+Expected output (key fields):
+
+```json
+{
+  "observation": {
+    "reward": 0.01,
+    "done": false,
+    "hints_used": 1,
+    "feedback": "Hint (1/3): Under the old regime, taxable salary income often reflects standard deduction ..."
+  }
+}
+```
+
+### Finalize advice (terminal reward with long-horizon components)
+
+```bash
+curl -s -X POST http://localhost:8000/step -H "Content-Type: application/json" \
+  -d '{"action": {"action_type": "finalize_advice"}}' | jq .
+```
+
+Expected output (key fields):
+
+```json
+{
+  "observation": {
+    "done": true,
+    "reward": 0.73,
+    "feedback": "Best advice rubric=0.7000 (submissions=1) | efficiency_bonus=0.050, hint_penalty=0.000, auto_penalty=0.000",
+    "metadata": {
+      "final_reward": 0.73,
+      "advisor_rubric": 0.7,
+      "efficiency_bonus": 0.05,
+      "hint_penalty": 0.0,
+      "auto_finalize_penalty": 0.0,
+      "steps_used": 2,
+      "advice_submissions": 1
+    }
+  }
+}
+```
