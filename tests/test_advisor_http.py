@@ -24,7 +24,7 @@ def test_submit_tax_advice_parses_curl_shaped_json(client: TestClient):
     assert r0.status_code == 200
     assert r0.json()["observation"]["episode_mode"] == "advisor"
 
-    # Hard-rubric: long summary, 3+ actions, 2+ cautions, 3+ task keyphrases (80c, chapter vi, nps, deduction)
+    # Hard-rubric: continuous partial credit on summary length, 4 action slots, cautions, keyphrases
     advice = {
         "filing_profile_summary": (
             "Metro private filer: optimize Chapter VI-A, 80C, and 80CCD NPS; document HRA and payroll."

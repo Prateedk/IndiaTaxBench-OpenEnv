@@ -1,4 +1,10 @@
-"""Rubric scoring for `submit_tax_advice` / `revise_tax_advice` episodes (next-year tax-saving advice)."""
+"""Rubric scoring for `submit_tax_advice` / `revise_tax_advice` episodes (next-year tax-saving advice).
+
+For `hard` tasks, sub-scores are **continuous** (piecewise linear ramps) instead of large
+flat buckets, so small edits to length, action count, cautions, or keyphrase coverage
+change the scalar reward in fine steps—useful when the base model is already strong.
+`medium` / `easy` paths are unchanged.
+"""
 
 from __future__ import annotations
 
@@ -100,16 +106,25 @@ def _count_good_actions(actions: Any) -> int:
     return n
 
 
+def _lin_ramp(x: float, x0: float, x1: float) -> float:
+    """0 at x<=x0, 1 at x>=x1, linear in between (finer resolution than big buckets)."""
+    if x <= x0:
+        return 0.0
+    if x >= x1:
+        return 1.0
+    return (x - x0) / (x1 - x0)
+
+
 def _summary_score(summary: Any, d: str) -> float:
     if not isinstance(summary, str):
         return 0.0
     n = len(summary.strip())
     if d == "hard":
-        if 50 <= n <= 4000:
-            return 0.25
-        if 28 <= n < 50:
-            return 0.1
-        return 0.0
+        # Two segments: (28–50] partial credit, then (50–500] tops up to 0.25 so
+        # small length edits move the score; stricter than a flat 0.25 for any 50+ chars.
+        a = 0.15 * _lin_ramp(n, 28.0, 50.0)
+        b = 0.10 * _lin_ramp(n, 50.0, 500.0)
+        return min(0.25, a + b)
     if d == "medium":
         if 30 <= n <= 4000:
             return 0.25
@@ -126,13 +141,8 @@ def _summary_score(summary: Any, d: str) -> float:
 def _actions_score(actions: Any, d: str) -> float:
     good = _count_good_actions(actions)
     if d == "hard":
-        if good >= 3:
-            return 0.3
-        if good == 2:
-            return 0.16
-        if good == 1:
-            return 0.08
-        return 0.0
+        # Up to 4 distinct action lines for full 0.3; partial credit in between.
+        return 0.3 * min(1.0, good / 4.0)
     if d == "medium":
         alen = len(actions) if isinstance(actions, list) else 0
         if good >= 2 or (good >= 1 and alen >= 3):
@@ -151,11 +161,7 @@ def _cautions_score(cautions: Any, d: str) -> float:
     if isinstance(cautions, list):
         n = len([c for c in cautions if isinstance(c, str) and len(c.strip()) > 0])
         if d == "hard":
-            if n >= 2:
-                return 0.2
-            if n == 1:
-                return 0.1
-            return 0.0
+            return 0.2 * min(1.0, n / 3.0)
         if n >= 1:
             return 0.2
         return 0.0
@@ -169,15 +175,11 @@ def _cautions_score(cautions: Any, d: str) -> float:
 def _keyphrase_score(comb: str, phrases: tuple[str, ...], d: str) -> float:
     m = sum(1 for p in phrases if p in comb)
     if d == "hard":
-        if m >= 3:
-            return 0.25
-        if m == 2:
-            return 0.12
-        if m == 1:
-            return 0.04
-        if len(comb) > 350:
-            return 0.03
-        return 0.0
+        # Proportional to covered keyphrases (tougher than 3-in-4 full credit).
+        np = max(1, len(phrases))
+        if m == 0 and len(comb) > 400:
+            return 0.02
+        return 0.25 * (m / np)
     if d == "medium":
         if m >= 1:
             return 0.25
