@@ -1,5 +1,7 @@
 # IndiaTaxBench: teaching models to *advise* on tax—not just to quote the tax code
 
+The most exciting signal in this project is when **two curves move together**: the **training loss steadily collapses toward ~0**, *and at the same time* the **test-set (non–SFT) environment rewards climb** on held-out / eval-only tasks. That combination is strong evidence that we are not just making the model “sound fluent” — we are making it **more useful**, in a way the environment can measure.
+
 ## 1. The problem: why the **advisor** track is the exciting part
 
 Most “AI + tax” demos stop at a quick answer: total tax (maybe a simple breakdown), done. That is useful—but it is not how real filers use help. What people actually need is **actionable, next-year guidance**: how to use 80C room, HRA evidence, NPS, health cover, capital-gains planning, and compliance steps—**grounded in their scenario** and written so a human can act on it.
