@@ -85,7 +85,7 @@ curl -s -X POST http://localhost:8000/step -H "Content-Type: application/json" \
 
 ```bash
 export API_BASE_URL=https://router.huggingface.co/v1   # optional; this is the default
-export MODEL_NAME=Qwen/Qwen2.5-3B-Instruct               # optional (default in inference.py)
+export MODEL_NAME=Qwen/Qwen2.5-1.5B-Instruct            # optional (default in inference.py; use 0.5B for tiny)
 # Use either key (OpenAI-compatible hosts accept one bearer-style key):
 export OPENAI_API_KEY=sk-...     # preferred name in OpenAI docs
 # export HF_TOKEN=hf_...         # alternative (e.g. Hugging Face Inference/Router)
@@ -97,7 +97,7 @@ export OPENAI_API_KEY=sk-...     # preferred name in OpenAI docs
 python inference.py
 ```
 
-Uses the **OpenAI Python client** against `API_BASE_URL` / `MODEL_NAME` (default **Qwen2.5-3B-Instruct**) with **`temperature=0`** for reproducible trajectories. Parse per-task **`[END] success=... score=...`** lines for baseline numbers.
+Uses the **OpenAI Python client** against `API_BASE_URL` / `MODEL_NAME` (default **Qwen2.5-1.5B-Instruct**; set **`Qwen/Qwen2.5-0.5B-Instruct`** for smallest) with **`temperature=0`** for reproducible trajectories. Parse per-task **`[END] success=... score=...`** lines for baseline numbers.
 
 ### Deterministic baseline (oracle policy)
 
@@ -117,7 +117,7 @@ Upper bound when the model submits **exact** oracle components then `finalize` (
 
 ## Training notebook
 
-See [`notebooks/train_qwen_india_tax.ipynb`](notebooks/train_qwen_india_tax.ipynb) for a **Qwen2.5-3B-Instruct** (overridable) LoRA / SFT stub that pulls **rewards from this OpenEnv Space** and trains locally with **TRL `SFTTrainer`**.
+See [`notebooks/train_qwen_india_tax.ipynb`](notebooks/train_qwen_india_tax.ipynb) for a **Qwen2.5-1.5B-Instruct** (overridable) LoRA / SFT stub that pulls **rewards from this OpenEnv Space** and trains locally with **TRL `SFTTrainer`**.
 
 ### Open in Colab (one click)
 
@@ -128,9 +128,9 @@ The notebook’s **first cell** auto-clones this repo and `pip install`s `.[note
 - **`HF_TOKEN`** — required to pull Qwen weights and `push_to_hub` adapters.
 - **`ENV_URL`** — your OpenEnv Space URL (defaults to the live demo).
 - *(optional)* **`OPENAI_API_KEY`** / **`API_KEY`** — only if you set `USE_API_FOR_POLICY=1` to use the HF Inference Router instead of the local model.
-- *(optional)* **`MODEL_NAME`** — override the 3B default.
+- *(optional)* **`MODEL_NAME`** — override the default (e.g. `Qwen/Qwen2.5-3B-Instruct` for more capacity, or `Qwen/Qwen2.5-0.5B-Instruct` for minimal VRAM).
 
-Then **Runtime → Change runtime type → GPU** (T4 is enough for `Qwen2.5-3B-Instruct` + LoRA) and **Run all**.
+Then **Runtime → Change runtime type → GPU** (T4 is enough for **1.5B** or **3B** + LoRA) and **Run all**.
 
 **Jupyter / Cursor kernel:** the name `openenv-india-tax-bench` only appears after you install **`ipykernel`** in the project venv and **register** a kernelspec (once per machine):
 

@@ -9,17 +9,19 @@ from server.advisor_rubric import parse_advice_json, score_advice_object
 
 
 def test_score_reasonable_for_valid_json():
+    # Hard: summary >=50 chars, 3+ actions, 2+ cautions, 3+ of (80c, chapter vi, nps, deduction) in text
     obj = {
-        "filing_profile_summary": "x" * 30,
+        "filing_profile_summary": "x" * 50,
         "next_year_actions": [
-            {"action": "maximize 80C basket", "rationale": "r1"},
-            {"action": "plan HRA proofs", "rationale": "r2"},
+            {"action": "maximize 80C and Chapter VI-A", "rationale": "NPS 80CCD combined with 80C"},
+            {"action": "plan HRA rent proofs in metro", "rationale": "r2"},
+            {"action": "record payroll deduction proofs", "rationale": "r3"},
         ],
-        "cautions": ["c1"],
+        "cautions": ["c1", "c2"],
     }
     s = score_advice_object(obj, "salary_metro_80c_fy2425")
     assert 0.0 <= s <= 1.0
-    assert s > 0.3
+    assert s > 0.4
 
 
 def test_parse_advice_json():

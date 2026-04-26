@@ -3,7 +3,7 @@
 
 Environment variables:
     API_BASE_URL   — OpenAI-compatible endpoint (default: HF router)
-    MODEL_NAME     — model id (default: Qwen/Qwen2.5-3B-Instruct)
+    MODEL_NAME     — model id (default: Qwen/Qwen2.5-1.5B-Instruct; set e.g. Qwen2.5-0.5B for smallest)
     OPENAI_API_KEY — Preferred API key for OpenAI-compatible providers
     HF_TOKEN / API_KEY — Alternative secrets if OPENAI_API_KEY is unset
     ENV_URL        — IndiaTaxBench server base URL (default: live HF Space)
@@ -41,7 +41,7 @@ assert _NB_SPEC.loader
 _NB_SPEC.loader.exec_module(_nbh)
 
 API_BASE_URL = os.getenv("API_BASE_URL", "https://router.huggingface.co/v1")
-MODEL_NAME = os.getenv("MODEL_NAME", "Qwen/Qwen2.5-3B-Instruct")
+MODEL_NAME = os.getenv("MODEL_NAME", "Qwen/Qwen2.5-1.5B-Instruct")
 
 
 def _resolve_api_key() -> str:

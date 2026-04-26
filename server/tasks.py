@@ -11,11 +11,12 @@ _JSONL_PATH = _REPO_ROOT / "india_tax_capture" / "data" / "india_tax_rows.jsonl"
 
 TaskDifficulty = Literal["easy", "medium", "hard"]
 
-# Curated difficulty (scenario complexity / income mix), not oracle reward.
+# Curated label for the UI; for advisor episodes this maps to stricter rubric
+# (more keyphrases, longer summary, more actions) so untrained baselines are not at ceiling.
 _TASK_DIFFICULTY: Dict[str, TaskDifficulty] = {
-    "senior_salary_deductions_fy2425": "easy",
-    "salary_non_metro_hra_fy2425": "medium",
-    "business_only_fy2425": "medium",
+    "senior_salary_deductions_fy2425": "hard",
+    "salary_non_metro_hra_fy2425": "hard",
+    "business_only_fy2425": "hard",
     "salary_metro_80c_fy2425": "hard",
     "salary_capital_gains_fy2425": "hard",
     "salary_business_mixed_fy2425": "hard",
@@ -105,7 +106,7 @@ def _load_tasks() -> Dict[str, Dict[str, Any]]:
             continue
         req = row.get("request") or {}
         scenario = req.get("scenario") if isinstance(req, dict) else {}
-        diff: TaskDifficulty = _TASK_DIFFICULTY.get(str(tid), "medium")
+        diff: TaskDifficulty = _TASK_DIFFICULTY.get(str(tid), "hard")
         tasks[str(tid)] = {
             "description": (
                 "Predict India FY 2024–25 **old tax regime** liability: "
@@ -126,6 +127,11 @@ def _load_tasks() -> Dict[str, Dict[str, Any]]:
 
 TASKS: Dict[str, Dict[str, Any]] = _load_tasks()
 ALL_TASK_IDS = list(TASKS.keys())
+
+
+def advisor_task_difficulty(task_id: str) -> TaskDifficulty:
+    """Difficulty used by advisor rubric; defaults to hard (strictest) for unknown task ids."""
+    return _TASK_DIFFICULTY.get(str(task_id), "hard")
 
 
 def advisor_keyphrases_for_task(task_id: str) -> tuple[str, ...]:

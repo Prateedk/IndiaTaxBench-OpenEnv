@@ -1,5 +1,6 @@
 """Integration tests for IndiaTaxBenchEnvironment."""
 
+import json
 import sys
 from pathlib import Path
 
@@ -84,11 +85,32 @@ class TestAdvisorEpisode:
         obs = env.reset(task=tid, advisor=True)
         assert obs.episode_mode == "advisor"
         assert "submit_tax_advice" in obs.valid_actions
-        sample = (
-            '{"filing_profile_summary": "Test filer with mixed income and deductions for FY 2024-25.", '
-            '"next_year_actions": [{"action": "Review 80C", "rationale": "Maximize"}, '
-            '{"action": "Track HRA", "rationale": "Documentation"}], '
-            '"cautions": ["Consult a professional for large changes."]}'
+        sample = json.dumps(
+            {
+                "filing_profile_summary": (
+                    "Test filer: metro, private, Chapter VI-A and 80C / NPS planning; "
+                    "FY 2024–25 baseline with documented payroll deductions. "
+                    "Long enough to satisfy the hard-rubric length band."
+                ),
+                "next_year_actions": [
+                    {
+                        "action": "Review 80C and 80CCD NPS room",
+                        "rationale": "Chapter VI-A cap",
+                    },
+                    {
+                        "action": "HRA rent proofs vs salary structure",
+                        "rationale": "exemption support",
+                    },
+                    {
+                        "action": "80D and advance-tax timing for bonus",
+                        "rationale": "avoid cashflow gaps",
+                    },
+                ],
+                "cautions": [
+                    "Get CA review for large life changes next year.",
+                    "Re-verify Form 12BB and ITR with current law.",
+                ],
+            }
         )
         o1 = env.step(
             IndiaTaxBenchAction(

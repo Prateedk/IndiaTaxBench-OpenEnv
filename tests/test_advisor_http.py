@@ -24,13 +24,20 @@ def test_submit_tax_advice_parses_curl_shaped_json(client: TestClient):
     assert r0.status_code == 200
     assert r0.json()["observation"]["episode_mode"] == "advisor"
 
+    # Hard-rubric: long summary, 3+ actions, 2+ cautions, 3+ task keyphrases (80c, chapter vi, nps, deduction)
     advice = {
-        "filing_profile_summary": "Sample summary text for a metro filer with salary and 80C.",
+        "filing_profile_summary": (
+            "Metro private filer: optimize Chapter VI-A, 80C, and 80CCD NPS; document HRA and payroll."
+        ),
         "next_year_actions": [
-            {"action": "Maximize 80C within 1.5L", "rationale": "ELSS/PPF"},
-            {"action": "HRA rent proofs", "rationale": "Documentation"},
+            {"action": "Maximize 80C and review Chapter VI-A basket", "rationale": "NPS/ELSS/EPF under caps"},
+            {"action": "Maintain rent proofs for HRA in metro", "rationale": "Exemption needs employer alignment"},
+            {"action": "Plan 80D and cash-flow for advance tax on bonus", "rationale": "Avoid year-end underpayment fees"},
         ],
-        "cautions": ["Engage a CA for large changes."],
+        "cautions": [
+            "Verify ITR and Form 12BB with current rules.",
+            "Get CA help if salary and bonus change materially next year.",
+        ],
     }
     r1 = client.post(
         "/step",
