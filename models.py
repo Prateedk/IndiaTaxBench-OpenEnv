@@ -25,7 +25,8 @@ class IndiaTaxBenchAction(Action):
     action_type: str = Field(
         ...,
         description=(
-            "One of: submit_prediction, revise_prediction, finalize, request_context"
+            "One of: submit_prediction, revise_prediction, finalize, request_context; "
+            "or advisor: submit_tax_advice, revise_tax_advice, finalize_advice, request_context"
         ),
     )
     item_index: Optional[int] = Field(
@@ -47,6 +48,10 @@ class IndiaTaxBenchAction(Action):
     predicted_cess: Optional[float] = Field(
         default=None,
         description="Predicted cess (INR)",
+    )
+    advice_text: Optional[str] = Field(
+        default=None,
+        description="JSON string of next-year tax-saving advice (advisor episode only)",
     )
 
 
@@ -76,4 +81,12 @@ class IndiaTaxBenchObservation(Observation):
     valid_actions: List[str] = Field(
         default_factory=list,
         description="Legal action_type values at this step",
+    )
+    submitted_advice: List[Dict[str, Any]] = Field(
+        default_factory=list,
+        description="Advisor-mode submissions with rubric scores",
+    )
+    episode_mode: str = Field(
+        default="numeric",
+        description="numeric: liability prediction; advisor: next-year tax-saving advice",
     )

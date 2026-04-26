@@ -75,3 +75,54 @@ class TestSubmitAndFinalize:
         fin = env.step(IndiaTaxBenchAction(action_type="finalize"))
         assert fin.done is True
         assert float(fin.reward or 0) < float(REWARD_MAX)
+
+
+class TestAdvisorEpisode:
+    def test_advisor_reset_and_finalize(self):
+        tid = ALL_TASK_IDS[0]
+        env = IndiaTaxBenchEnvironment()
+        obs = env.reset(task=tid, advisor=True)
+        assert obs.episode_mode == "advisor"
+        assert "submit_tax_advice" in obs.valid_actions
+        sample = (
+            '{"filing_profile_summary": "Test filer with mixed income and deductions for FY 2024-25.", '
+            '"next_year_actions": [{"action": "Review 80C", "rationale": "Maximize"}, '
+            '{"action": "Track HRA", "rationale": "Documentation"}], '
+            '"cautions": ["Consult a professional for large changes."]}'
+        )
+        o1 = env.step(
+            IndiaTaxBenchAction(
+                action_type="submit_tax_advice",
+                advice_text=sample,
+            )
+        )
+        assert o1.done is False
+        assert o1.submitted_advice
+        fin = env.step(IndiaTaxBenchAction(action_type="finalize_advice"))
+        assert fin.done is True
+        assert REWARD_MIN <= float(fin.reward or 0) <= REWARD_MAX
+
+    def test_advisor_revise(self):
+        tid = ALL_TASK_IDS[0]
+        env = IndiaTaxBenchEnvironment()
+        env.reset(task=tid, advisor=True)
+        w1 = (
+            '{"filing_profile_summary": "Short.", "next_year_actions": [{"action": "a", "rationale": "b"}], '
+            '"cautions": ["c"]}'
+        )
+        env.step(IndiaTaxBenchAction(action_type="submit_tax_advice", advice_text=w1))
+        w2 = (
+            '{"filing_profile_summary": "A longer profile summary for the filer with enough text here.", '
+            '"next_year_actions": [{"action": "Maximize 80C", "rationale": "Use NPS 80CCD"}, '
+            '{"action": "HRA rent receipts", "rationale": "Proof for exemption"}], '
+            '"cautions": ["Get CA review if business income grows."]}'
+        )
+        o2 = env.step(
+            IndiaTaxBenchAction(
+                action_type="revise_tax_advice",
+                item_index=0,
+                advice_text=w2,
+            )
+        )
+        assert o2.done is False
+        assert o2.submitted_advice[0].get("rubric", 0) >= 0.0

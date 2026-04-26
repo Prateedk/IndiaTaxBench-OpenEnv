@@ -1,0 +1,23 @@
+{
+  "tax_settings": {
+    "age": 44,
+    "financial_year": 2025,
+    "is_metro_resident": true,
+    "employment_type": "private"
+  },
+  "salary": {
+    "basic_and_da": 1650000,
+    "hra": 420000,
+    "other_allowances": 180000,
+    "bonus_and_commissions": 220000
+  },
+  "business": {
+    "business_income": 450000,
+    "property_income": 0
+  },
+  "deductions": {
+    "section_80c": 150000,
+    "section_80ccd_1b": 50000,
+    "section_80d": 50000
+  }
+}

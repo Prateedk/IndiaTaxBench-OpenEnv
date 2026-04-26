@@ -1,0 +1,24 @@
+{
+  "tax_settings": {
+    "age": 41,
+    "financial_year": 2025,
+    "is_metro_resident": true,
+    "employment_type": "private"
+  },
+  "salary": {
+    "basic_and_da": 1200000,
+    "hra": 240000,
+    "other_allowances": 80000,
+    "bonus_and_commissions": 200000
+  },
+  "capital_gains": {
+    "short_term_at_normal": 200000,
+    "short_term_at_20_percent": 50000,
+    "long_term_at_20_percent": 500000,
+    "long_term_at_12_5_percent": 150000
+  },
+  "deductions": {
+    "section_80c": 150000,
+    "section_80d": 25000
+  }
+}

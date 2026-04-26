@@ -33,6 +33,33 @@ Feedback:
 
 Return ONLY one JSON object with keys: total, initial_tax, surcharge, cess (numbers)."""
 
+ADVISOR_SYSTEM_PROMPT = """\
+You are a compliant India income-tax planning assistant. The user provides a **FY 2024–25** \
+(financial_year=2025) JSON scenario and a `task_id`. Your job is **not** to replace the tax engine, \
+but to suggest **concrete, legal next-year and next–assessment-cycle tax-saving levers** this filer \
+can consider (documentation, 80C/80D/NPS, HRA, business timing, capital-gains planning, record-keeping).
+
+Return **only one JSON object** (no markdown) with exactly these keys:
+- `filing_profile_summary` (string, 2–4 sentences, grounded in the scenario)
+- `next_year_actions` (list of at least 2 objects, each with `action` and `rationale`; optional `indicative_section` like "80C")
+- `cautions` (list of at least 1 string: limits, or when to seek a professional)
+
+Do not suggest evasion, hiding income, or false deductions."""
+
+REVISE_ADVISOR_PROMPT = """\
+The environment gave feedback on your previous JSON advice. Improve the **same schema** (filing_profile_summary, next_year_actions, cautions) while staying legal and specific.
+
+Scenario JSON:
+{scenario}
+
+Previous advice JSON:
+{previous}
+
+Environment feedback:
+{feedback}
+
+Return ONLY the improved single JSON object."""
+
 
 def unwrap_observation(payload: Dict[str, Any]) -> Dict[str, Any]:
     return payload.get("observation", payload)
@@ -88,6 +115,49 @@ def _coerce_obj(raw: str) -> Dict[str, Any]:
         except Exception:
             pass
     return {}
+
+
+def parse_advice_text(raw: str) -> Dict[str, Any]:
+    """Parse model output into a dict; uses server rubric module when `server` is importable."""
+    try:
+        from server.advisor_rubric import parse_advice_json
+    except ImportError:
+        parse_advice_json = None  # type: ignore[assignment]
+    if parse_advice_json is not None:
+        out = parse_advice_json(raw)
+        return out if out else {}
+    d = _coerce_obj(raw)
+    return d if d else {}
+
+
+def build_advisor_messages(
+    scenario_json: str,
+    task_id: str,
+    *,
+    task_description: str = "",
+) -> List[Dict[str, str]]:
+    u = f"Task id: {task_id}\n"
+    if task_description:
+        u += f"Task focus: {task_description}\n"
+    u += f"Scenario JSON:\n{scenario_json}\n"
+    return [
+        {"role": "system", "content": ADVISOR_SYSTEM_PROMPT},
+        {"role": "user", "content": u},
+    ]
+
+
+def build_revise_advisor_messages(
+    scenario_json: str, previous: str, feedback: str
+) -> List[Dict[str, str]]:
+    return [
+        {"role": "system", "content": ADVISOR_SYSTEM_PROMPT},
+        {
+            "role": "user",
+            "content": REVISE_ADVISOR_PROMPT.format(
+                scenario=scenario_json, previous=previous, feedback=feedback
+            ),
+        },
+    ]
 
 
 def parse_prediction(raw: str) -> Dict[str, float]:
