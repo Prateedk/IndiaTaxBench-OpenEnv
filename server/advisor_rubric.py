@@ -20,6 +20,17 @@ _BAD_PHRASES: tuple[str, ...] = (
 )
 
 
+def _loads_advice_object(text: str) -> Any:
+    """Parse JSON; on failure, take the first top-level {...} block (tolerant of markdown noise)."""
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        m = re.search(r"\{[\s\S]*\}", text)
+        if not m:
+            raise
+        return json.loads(m.group(0))
+
+
 def parse_advice_json(raw: Optional[str]) -> Optional[Dict[str, Any]]:
     if not raw or not str(raw).strip():
         return None
@@ -29,17 +40,23 @@ def parse_advice_json(raw: Optional[str]) -> Optional[Dict[str, Any]]:
         text = "\n".join(
             ln for ln in lines if not ln.strip().startswith("```")
         ).strip()
-    try:
-        obj = json.loads(text)
-    except json.JSONDecodeError:
-        m = re.search(r"\{[\s\S]*\}", text)
-        if not m:
+    # Unwrap double-encoded / string-wrapped JSON: load until we get a dict
+    # (e.g. "\"{...}\"" or a model returning json.dumps(s) of an object string).
+    obj: Any
+    for _ in range(4):
+        if not text:
             return None
         try:
-            obj = json.loads(m.group(0))
+            obj = _loads_advice_object(text)
         except json.JSONDecodeError:
             return None
-    return obj if isinstance(obj, dict) else None
+        if isinstance(obj, dict):
+            return obj
+        if isinstance(obj, str):
+            text = obj.strip()
+            continue
+        return None
+    return None
 
 
 def _flatten_lower(obj: Any) -> str:

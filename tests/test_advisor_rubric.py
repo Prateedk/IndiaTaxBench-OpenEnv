@@ -27,3 +27,17 @@ def test_parse_advice_json():
     o = parse_advice_json(t)
     assert o is not None
     assert "filing_profile_summary" in o
+
+
+def test_parse_advice_json_double_encoded_string():
+    import json
+
+    inner = {
+        "filing_profile_summary": "x" * 30,
+        "next_year_actions": [{"action": "a1", "rationale": "r1"}],
+        "cautions": ["c1"],
+    }
+    t = json.dumps(json.dumps(inner))
+    o = parse_advice_json(t)
+    assert o is not None
+    assert o.get("filing_profile_summary") == "x" * 30
